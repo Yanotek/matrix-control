@@ -1,0 +1,19 @@
+{
+  "name": "matrix-control",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "docker-cli-js": "^2.8.0",
+    "tcp-port-used": "^1.0.2"
+  },
+  "devDependencies": {
+    "docker-compose": "^0.23.13"
+  }
+}
