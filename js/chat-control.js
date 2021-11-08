@@ -2,6 +2,9 @@ const dockerCLI = require('docker-cli-js');
 const dockerCompose = require('docker-compose');
 const tcpPortUsed = require('tcp-port-used');
 const fs = require('fs');
+const axios = require('axios');
+const https = require('https');
+const request = require('request');
 
 module.exports = class ChatControl {
     constructor(options) {
@@ -111,6 +114,35 @@ module.exports = class ChatControl {
         if (!fs.existsSync(dataDir + "\\configs")) {
             fs.mkdirSync(dataDir + "\\configs");
         }
+    }
+
+    downloadAndUnzipLastRelease() {
+        const downloadPath = this.options.dataDir + "downloads\\";
+
+        if (!fs.existsSync(downloadPath)) {
+            fs.mkdirSync(downloadPath);
+        } else {
+            fs.rmdirSync(downloadPath, {recursive: true});
+            fs.mkdirSync(downloadPath);
+        }
+
+        return axios.get("https://api.github.com/repos/yanotek/matrix-control/releases/latest").then(function(response) {
+            const data = response.data;
+            const zipUrl = data["zipball_url"];
+
+            if(zipUrl) return Promise.resolve(zipUrl)
+
+            return Promise.reject('notfound')
+        }).then(function(url) {
+            const file = fs.createWriteStream(downloadPath + "release.zip");
+
+            request({
+                uri: url,
+                headers: {
+                    'User-Agent': 'request'
+                }
+            }).pipe(file)
+        })
     }
 }
 
