@@ -1,0 +1,41 @@
+server_name: "${domain}"
+
+pid_file: /configs/homeserver.pid
+
+presence:
+  enabled: false
+
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+
+    resources:
+      - names: [client, federation]
+        compress: false
+        
+database:
+  name: sqlite3
+  args:
+    database: /matrix-data/homeserver.db
+
+
+log_config: "/configs/${domain}.log.config"
+
+media_store_path: "/matrix-data/media_store"
+
+url_preview_enabled: true
+
+url_preview_ip_range_blacklist:
+
+url_preview_accept_language:
+
+enable_registration: true
+
+report_stats: false
+
+signing_key_path: "/configs/${domain}.signing.key"
+
+trusted_key_servers:
+  - server_name: "matrix.org"
