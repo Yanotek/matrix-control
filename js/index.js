@@ -4,4 +4,6 @@ const chat = new ChatControl({
     domain: "lolec.ru"
 });
 
-chat.createDataFolder();
+chat.downloadAndUnzipLastRelease().then(function() {
+
+});

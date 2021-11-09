@@ -3,8 +3,7 @@ const dockerCompose = require('docker-compose');
 const tcpPortUsed = require('tcp-port-used');
 const fs = require('fs');
 const axios = require('axios');
-const https = require('https');
-const request = require('request');
+const extractZip = require('extract-zip');
 
 module.exports = class ChatControl {
     constructor(options) {
@@ -133,16 +132,37 @@ module.exports = class ChatControl {
             if(zipUrl) return Promise.resolve(zipUrl)
 
             return Promise.reject('notfound')
-        }).then(function(url) {
+        }).then(async function(url) {
             const file = fs.createWriteStream(downloadPath + "release.zip");
 
-            request({
-                uri: url,
+            return axios({
+                method: 'GET',
+                url: url,
+                responseType: 'stream',
                 headers: {
                     'User-Agent': 'request'
                 }
-            }).pipe(file)
-        })
+            }).then(async response => {
+                return new Promise((resolve, reject) => {
+                    response.data.pipe(file);
+                    let error = null;
+                    file.on('error', err => {
+                        error = err;
+                        file.close();
+                        reject(err);
+                    });
+                    file.on('close', () => {
+                        if (!error) {
+                            resolve(true);
+                        }
+                    });
+                });
+            }).then(function () {
+                return extractZip(downloadPath + "release.zip", { dir: "C:\\temp\\matrix-data\\downloads" });
+            });
+        }).then(function () {
+            console.log("end");
+        });
     }
 }
 
