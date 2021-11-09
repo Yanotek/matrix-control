@@ -1,4 +1,4 @@
-server_name: "${domain}"
+server_name: "#DOMAIN"
 
 pid_file: /configs/homeserver.pid
 
@@ -21,7 +21,7 @@ database:
     database: /matrix-data/homeserver.db
 
 
-log_config: "/configs/${domain}.log.config"
+log_config: "/configs/#DOMAIN.log.config"
 
 media_store_path: "/matrix-data/media_store"
 
@@ -35,7 +35,7 @@ enable_registration: true
 
 report_stats: false
 
-signing_key_path: "/configs/${domain}.signing.key"
+signing_key_path: "/configs/#DOMAIN.signing.key"
 
 trusted_key_servers:
   - server_name: "matrix.org"

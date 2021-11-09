@@ -164,5 +164,19 @@ module.exports = class ChatControl {
             console.log("end");
         });
     }
+
+    copyTemplate(source, dest, parameters) {
+        fs.promises.readFile(source,  'utf8')
+            .then(function (result) {
+                Object.keys(parameters).map(function(objectKey, index) {
+                    const value = parameters[objectKey];
+                    result = result.replace(new RegExp(objectKey, 'g'), value);
+                });
+
+                return fs.writeFile(dest, result, 'utf8', function (err) {
+                    if (err) return console.log(err);
+                });
+            })
+    }
 }
 
