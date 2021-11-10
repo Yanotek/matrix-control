@@ -1,4 +1,4 @@
-server_name: "#DOMAIN"
+server_name: "#DOMAIN:#PORT"
 
 pid_file: /configs/homeserver.pid
 

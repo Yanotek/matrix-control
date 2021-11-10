@@ -105,11 +105,18 @@ module.exports = class ChatControl {
 
             return chat.copyTemplates(parameters);
         }).then(function () {
-            chat.removeDownloads();
-        }).then(function () {
             if (!chat.checkMatrixCert()) {
                 return chat.generateMatrixKey();
             }
+        }).then(function (){
+            const parameters = {
+                "#DOMAIN": chat.options.domain,
+                "#PORT": chat.options.port
+            }
+
+            return chat.copyTemplates(parameters);
+        }).then(function () {
+            chat.removeDownloads();
         });
     }
 
@@ -219,24 +226,22 @@ module.exports = class ChatControl {
         return dockerCompose
             .run("bastyon-chat", "generate", {cwd: this.options.dataDir})
             .then(function () {
-                const signingKey = chat.options.domain + ".signing.key";
-                const logFile = chat.options.domain + ".log.config";
-
-                const dataPath = chat.options.dataDir + "\\data\\";
+                // const signingKey = "bastyon.signing.key";
+                // const logFile = "bastyon.log.config";
+                //
+                //const dataPath = chat.options.dataDir + "\\data\\";
                 const configsPath = chat.options.dataDir + "\\configs\\";
+                //
+                // fs.copyFile(dataPath + signingKey, configsPath + signingKey, function (error) {
+                //     if (error)
+                //         console.log(error);
+                // });
+                // fs.copyFile(dataPath + logFile, configsPath + logFile, function (error) {
+                //     if (error)
+                //         console.log(error);
+                // });
 
-                fs.copyFile(dataPath + signingKey, configsPath + signingKey, function (error) {
-                    if (error)
-                        console.log(error);
-                });
-                fs.copyFile(dataPath + logFile, configsPath + logFile, function (error) {
-                    if (error)
-                        console.log(error);
-                });
-
-                fs.rmSync(dataPath + signingKey);
-                fs.rmSync(dataPath + logFile);
-                fs.rmSync(dataPath + "homeserver.yaml");
+                fs.rmSync(configsPath + "homeserver.yaml");
             });
     }
 }
