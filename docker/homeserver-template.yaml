@@ -18,12 +18,12 @@ listeners:
 database:
   name: sqlite3
   args:
-    database: /matrix-data/homeserver.db
+    database: /data/homeserver.db
 
 
 log_config: "/configs/#DOMAIN.log.config"
 
-media_store_path: "/matrix-data/media_store"
+media_store_path: "/data/media_store"
 
 url_preview_enabled: true
 

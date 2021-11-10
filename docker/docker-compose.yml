@@ -6,7 +6,8 @@ services:
     image: pocketnetteam/matrix-synapse:latest
     environment:
     - SYNAPSE_REPORT_STATS=no
-    - SYNAPSE_SERVER_NAME=#DOMAIN
+    - SYNAPSE_SERVER_NAME="#DOMAIN"
+    - SYNAPSE_CONFIG_DIR=/configs
     volumes:
       - ./data:/data
       - ./configs:/configs

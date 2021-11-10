@@ -107,7 +107,9 @@ module.exports = class ChatControl {
         }).then(function () {
             chat.removeDownloads();
         }).then(function () {
-
+            if (!chat.checkMatrixCert()) {
+                return chat.generateMatrixKey();
+            }
         });
     }
 
