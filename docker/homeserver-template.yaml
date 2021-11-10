@@ -21,7 +21,7 @@ database:
     database: /data/homeserver.db
 
 
-log_config: "/configs/#DOMAIN.log.config"
+log_config: "/configs/bastyon.log.config"
 
 media_store_path: "/data/media_store"
 
@@ -35,7 +35,7 @@ enable_registration: true
 
 report_stats: false
 
-signing_key_path: "/configs/#DOMAIN.signing.key"
+signing_key_path: "/configs/bastyon.signing.key"
 
 trusted_key_servers:
   - server_name: "matrix.org"
