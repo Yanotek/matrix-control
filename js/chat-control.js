@@ -4,7 +4,6 @@ const tcpPortUsed = require('tcp-port-used');
 const fs = require('fs');
 const axios = require('axios');
 const extractZip = require('extract-zip');
-const shell = require('shelljs');
 
 module.exports = class ChatControl {
     constructor(options) {
@@ -75,17 +74,6 @@ module.exports = class ChatControl {
         }
 
         return exists;
-    }
-
-    checkSslCert() {
-        const basePath = this.options.dataDir + "data\\certbot\\conf\\live\\" + this.options.domain + "\\";
-
-        if (!fs.existsSync(basePath + "fullchain.pem") || !fs.existsSync(basePath + "privkey.pem")) {
-            console.log("ssl cert doesn't exists");
-            return false;
-        }
-
-        return true;
     }
 
     checkWhatFolderIsEmpty() {
@@ -201,11 +189,7 @@ module.exports = class ChatControl {
         const destPath = this.options.dataDir;
 
         return chat.copyTemplate(dockerPath + "docker-compose.yml", destPath + "docker-compose.yml", parameters).then( function () {
-            return chat.copyTemplate(dockerPath + "init-letsencrypt.sh", destPath + "init-letsencrypt.sh", parameters);
-        }).then(function () {
             return chat.copyTemplate(dockerPath + "homeserver-template.yaml", destPath + "configs\\homeserver.yaml", parameters);
-        }).then(function () {
-            return chat.copyTemplate(dockerPath + "nginx-app.conf", destPath + "configs\\nginx\\conf.d\\app.conf", parameters);
         });
     }
 
@@ -256,11 +240,6 @@ module.exports = class ChatControl {
                 fs.rmSync(dataPath + logFile);
                 fs.rmSync(dataPath + "homeserver.yaml");
             });
-    }
-
-    generateSslCert() {
-        const filePath = this.options.dataDir + '\\init-letsencrypt.sh';
-        return shell.exec(filePath);
     }
 }
 
