@@ -4,6 +4,7 @@ const tcpPortUsed = require('tcp-port-used');
 const fs = require('fs');
 const axios = require('axios');
 const extractZip = require('extract-zip');
+const shell = require('shelljs');
 
 module.exports = class ChatControl {
     constructor(options) {
@@ -103,19 +104,39 @@ module.exports = class ChatControl {
         });
     }
 
+    installLastRelease() {
+        const chat = this;
+
+        return chat.downloadAndUnzipLastRelease().then(function () {
+            chat.createFolderStructure();
+
+            const parameters = {
+                "#DOMAIN": chat.options.domain,
+                "#PORT": chat.options.port
+            }
+
+            return chat.copyTemplates(parameters);
+        }).then(function () {
+            chat.removeDownloads();
+        }).then(function () {
+
+        });
+    }
+
     createFolderStructure() {
         const dataDir = this.options.dataDir;
 
-        if (!fs.existsSync(dataDir + "\\data")) {
-            fs.mkdirSync(dataDir + "\\data");
+        if (!fs.existsSync(dataDir + "\\configs")) {
+            fs.mkdirSync(dataDir + "\\configs", { recursive: true });
         }
 
-        if (!fs.existsSync(dataDir + "\\configs")) {
-            fs.mkdirSync(dataDir + "\\configs");
+        if (!fs.existsSync(dataDir + "\\configs\\nginx\\conf.d")) {
+            fs.mkdirSync(dataDir + "\\configs\\nginx\\conf.d", { recursive: true });
         }
     }
 
     downloadAndUnzipLastRelease() {
+        const chat = this;
         const downloadPath = this.options.dataDir + "downloads\\";
 
         if (!fs.existsSync(downloadPath)) {
@@ -158,15 +179,46 @@ module.exports = class ChatControl {
                     });
                 });
             }).then(function () {
-                return extractZip(downloadPath + "release.zip", { dir: "C:\\temp\\matrix-data\\downloads" });
+                return extractZip(downloadPath + "release.zip", { dir: chat.options.dataDir + "\\downloads" });
             });
-        }).then(function () {
-            console.log("end");
         });
     }
 
+    copyTemplates(parameters) {
+        const downloadsPath = this.options.dataDir + "\\downloads";
+        const chat = this;
+
+        const directories =
+            fs.readdirSync(downloadsPath, { withFileTypes: true })
+                .filter(dirent => dirent.isDirectory() && dirent.name.includes("matrix-control"))
+                .map(dirent => dirent.name);
+
+        if (directories.length !== 1) {
+            throw "downloads contains more than 1 matrix-control folders";
+        }
+
+        const dockerPath = downloadsPath + "\\" + directories[0] + "\\docker\\";
+        const destPath = this.options.dataDir;
+
+        return chat.copyTemplate(dockerPath + "docker-compose.yml", destPath + "docker-compose.yml", parameters).then( function () {
+            return chat.copyTemplate(dockerPath + "init-letsencrypt.sh", destPath + "init-letsencrypt.sh", parameters);
+        }).then(function () {
+            return chat.copyTemplate(dockerPath + "homeserver-template.yaml", destPath + "configs\\homeserver.yaml", parameters);
+        }).then(function () {
+            return chat.copyTemplate(dockerPath + "nginx-app.conf", destPath + "configs\\nginx\\conf.d\\app.conf", parameters);
+        });
+    }
+
+    removeDownloads() {
+        const downloadPath = this.options.dataDir + "downloads\\";
+
+        if (fs.existsSync(downloadPath)) {
+            fs.rmdirSync(downloadPath, {recursive: true});
+        }
+    }
+
     copyTemplate(source, dest, parameters) {
-        fs.promises.readFile(source,  'utf8')
+        return fs.promises.readFile(source,  'utf8')
             .then(function (result) {
                 Object.keys(parameters).map(function(objectKey, index) {
                     const value = parameters[objectKey];
@@ -177,6 +229,38 @@ module.exports = class ChatControl {
                     if (err) return console.log(err);
                 });
             })
+    }
+
+    generateMatrixKey() {
+        const chat = this;
+
+        return dockerCompose
+            .run("bastyon-chat", "generate", {cwd: this.options.dataDir})
+            .then(function () {
+                const signingKey = chat.options.domain + ".signing.key";
+                const logFile = chat.options.domain + ".log.config";
+
+                const dataPath = chat.options.dataDir + "\\data\\";
+                const configsPath = chat.options.dataDir + "\\configs\\";
+
+                fs.copyFile(dataPath + signingKey, configsPath + signingKey, function (error) {
+                    if (error)
+                        console.log(error);
+                });
+                fs.copyFile(dataPath + logFile, configsPath + logFile, function (error) {
+                    if (error)
+                        console.log(error);
+                });
+
+                fs.rmSync(dataPath + signingKey);
+                fs.rmSync(dataPath + logFile);
+                fs.rmSync(dataPath + "homeserver.yaml");
+            });
+    }
+
+    generateSslCert() {
+        const filePath = this.options.dataDir + '\\init-letsencrypt.sh';
+        return shell.exec(filePath);
     }
 }
 

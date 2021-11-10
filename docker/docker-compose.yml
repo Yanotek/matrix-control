@@ -4,8 +4,12 @@ services:
   bastyon-chat:
     container_name: 'bastyon-chat'
     image: pocketnetteam/matrix-synapse:latest
+    environment:
+    - SYNAPSE_REPORT_STATS=no
+    - SYNAPSE_SERVER_NAME=#DOMAIN
     volumes:
       - ./data:/data
+      - ./configs:/configs
     ports:
       - "8009:8008"
     logging:
@@ -18,10 +22,10 @@ services:
     image: nginx:latest
     restart: unless-stopped
     volumes:
-#      - ./data/nginx/main.conf:/etc/nginx/nginx.conf
-      - ./data/nginx/conf.d:/etc/nginx/conf.d
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
+#      - ./configs/nginx/main.conf:/etc/nginx/nginx.conf
+      - ./configs/nginx/conf.d:/etc/nginx/conf.d
+      - ./configs/certbot/conf:/etc/letsencrypt
+      - ./configs/certbot/www:/var/www/certbot
     ports:
       - "80:80"
       - "443:443"
@@ -35,8 +39,8 @@ services:
     image: certbot/certbot
     restart: unless-stopped
     volumes:
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
+      - ./configs/certbot/conf:/etc/letsencrypt
+      - ./configs/certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     logging:
       driver: "json-file"
