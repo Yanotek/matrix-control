@@ -117,10 +117,6 @@ module.exports = class ChatControl {
         if (!fs.existsSync(dataDir + "\\configs")) {
             fs.mkdirSync(dataDir + "\\configs", { recursive: true });
         }
-
-        if (!fs.existsSync(dataDir + "\\configs\\nginx\\conf.d")) {
-            fs.mkdirSync(dataDir + "\\configs\\nginx\\conf.d", { recursive: true });
-        }
     }
 
     downloadAndUnzipLastRelease() {
