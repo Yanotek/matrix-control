@@ -6,7 +6,7 @@ services:
     image: pocketnetteam/matrix-synapse:latest
     environment:
     - SYNAPSE_REPORT_STATS=no
-    - SYNAPSE_SERVER_NAME="bastyon"
+    - SYNAPSE_SERVER_NAME=bastyon
     - SYNAPSE_CONFIG_DIR=/configs
     volumes:
       - ./data:/data
