@@ -4,6 +4,6 @@ const chat = new ChatControl({
     domain: "lolec.ru"
 });
 
-chat.downloadAndUnzipLastRelease().then(function() {
-
-});
+chat.copyTemplate("C:\\temp\\matrix-data\\homeserver-template.yaml", "C:\\temp\\matrix-data\\homeserver.yaml", {
+    "#DOMAIN": "vamily.ru"
+})
