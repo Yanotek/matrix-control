@@ -14,23 +14,27 @@ module.exports = class ChatControl {
         const docker = new dockerCLI.Docker();
         docker.options.echo = false;
 
-        docker.command('ps').then(function (data) {
-            console.log('data = ', data);
-        }).catch(function(reason) {
-            console.error('This error may indicate that the docker daemon is not running: ' + reason);
+        return docker.command('ps').then(function (data) {
 
-            return false;
+        }).then(function () {
+            return dockerCompose.version().then(function (data) {
+            })
         })
+    }
 
-        dockerCompose.version().then(function (data) {
-            console.log('data = ', data);
-        }).catch(function(reason) {
-            console.error('This error may indicate that the docker-compose not installed: ' + reason);
+    checkChatIsRunning() {
+        const docker = new dockerCLI.Docker();
+        docker.options.echo = false;
 
+        return docker.command('inspect bastyon-chat').then(function (data) {
+            if (data.object.length === 0) {
+                return false;
+            }
+
+            return data.object[0].State.Running;
+        }, function (rejected) {
             return false;
-        })
-
-        return true;
+        });
     }
 
     checkPortIsBusy(port) {
@@ -49,15 +53,9 @@ module.exports = class ChatControl {
     }
 
     checkMatrixCert() {
-        const pathToFile = this.options.dataDir + "configs\\" + this.options.domain + ".signing.key";
+        const pathToFile = this.options.dataDir + "configs\\bastyon.signing.key";
 
         const exists = fs.existsSync(pathToFile);
-
-        if (exists) {
-            console.log("file " + pathToFile +  " exists")
-        } else {
-            console.log("file " + pathToFile +  " not exists")
-        }
 
         return exists;
     }
@@ -66,12 +64,6 @@ module.exports = class ChatControl {
         const pathToFile = this.options.dataDir + "configs\\homeserver.yaml";
 
         const exists = fs.existsSync(pathToFile);
-
-        if (exists) {
-            console.log("file " + pathToFile +  " exists")
-        } else {
-            console.log("file " + pathToFile +  " not exists")
-        }
 
         return exists;
     }
@@ -87,6 +79,61 @@ module.exports = class ChatControl {
                     console.log("folder is empty");
                 } else {
                     console.log("folder is not empty");
+                }
+            }
+        });
+    }
+
+    startServer() {
+        const port = this.options.port;
+        const chat = this;
+
+        return this.checkChatIsRunning().then(function (isRunning) {
+            if (isRunning) {
+                return Promise.resolve();
+            }
+
+            return chat.checkPortIsBusy(port).then(function (result) {
+                if (result) {
+                    return Promise.reject('port is busy');
+                }
+            }).then(function () {
+                if (!chat.checkHomeServerConfig() || !chat.checkMatrixCert()) {
+                    return chat.installLastRelease();
+                }
+            }).then(function () {
+                return chat.checkDocker();
+            }).then(function () {
+                return dockerCompose.upAll({cwd: chat.options.dataDir})
+            });
+        });
+    }
+
+    stopServer() {
+        return dockerCompose.stop({cwd: this.options.dataDir});
+    }
+
+    restartServer() {
+        const chat = this;
+
+        return this.stopServer().then(function () {
+            return chat.startServer();
+        })
+    }
+
+    deleteAllUserData() {
+        const dataPath = this.options.dataDir + "data\\";
+
+        return this.stopServer().then(function () {
+            if (fs.existsSync(dataPath)) {
+                const files = fs.readdirSync(dataPath);
+
+                for (const file of files) {
+                    if (fs.existsSync(dataPath + file + "\\")) {
+                        fs.rmdirSync(dataPath + file + "\\", {recursive: true});
+                    } else {
+                        fs.unlinkSync(dataPath + file);
+                    }
                 }
             }
         });
@@ -117,6 +164,10 @@ module.exports = class ChatControl {
             return chat.copyTemplates(parameters);
         }).then(function () {
             chat.removeDownloads();
+        }).then(function () {
+            return chat.pullLastRelease();
+        }).then(function () {
+            return chat.writeCompleteReleaseTag();
         });
     }
 
@@ -143,9 +194,12 @@ module.exports = class ChatControl {
             const data = response.data;
             const zipUrl = data["zipball_url"];
 
-            if(zipUrl) return Promise.resolve(zipUrl)
+            const version = data["tag_name"];
+            chat.writeInstallationTag(version);
 
-            return Promise.reject('notfound')
+            if(zipUrl) return Promise.resolve(zipUrl);
+
+            return Promise.reject('notfound');
         }).then(async function(url) {
             const file = fs.createWriteStream(downloadPath + "release.zip");
 
@@ -207,17 +261,16 @@ module.exports = class ChatControl {
     }
 
     copyTemplate(source, dest, parameters) {
-        return fs.promises.readFile(source,  'utf8')
-            .then(function (result) {
-                Object.keys(parameters).map(function(objectKey, index) {
-                    const value = parameters[objectKey];
-                    result = result.replace(new RegExp(objectKey, 'g'), value);
-                });
+        return fs.promises.readFile(source,  'utf8').then(function (result) {
+            Object.keys(parameters).map(function(objectKey, index) {
+                const value = parameters[objectKey];
+                result = result.replace(new RegExp(objectKey, 'g'), value);
+            });
 
-                return fs.writeFile(dest, result, 'utf8', function (err) {
-                    if (err) return console.log(err);
-                });
-            })
+            return fs.writeFile(dest, result, 'utf8', function (err) {
+                if (err) return console.log(err);
+            });
+        });
     }
 
     generateMatrixKey() {
@@ -226,23 +279,50 @@ module.exports = class ChatControl {
         return dockerCompose
             .run("bastyon-chat", "generate", {cwd: this.options.dataDir})
             .then(function () {
-                // const signingKey = "bastyon.signing.key";
-                // const logFile = "bastyon.log.config";
-                //
-                //const dataPath = chat.options.dataDir + "\\data\\";
                 const configsPath = chat.options.dataDir + "\\configs\\";
-                //
-                // fs.copyFile(dataPath + signingKey, configsPath + signingKey, function (error) {
-                //     if (error)
-                //         console.log(error);
-                // });
-                // fs.copyFile(dataPath + logFile, configsPath + logFile, function (error) {
-                //     if (error)
-                //         console.log(error);
-                // });
 
                 fs.rmSync(configsPath + "homeserver.yaml");
             });
+    }
+
+    pullLastRelease() {
+        const docker = new dockerCLI.Docker();
+        docker.options.echo = false;
+
+        return docker.command('pull pocketnetteam/matrix-synapse:latest').then(function (data) {
+        }, function (rejected) {
+            console.error('rejected = ', rejected);
+            return Promise.reject("docker pull pocketnetteam/matrix-synapse:latest failed");
+        });
+    }
+
+    writeInstallationTag(tag) {
+        const dataDir = this.options.dataDir;
+        fs.writeFileSync(dataDir + '\\version', "#" + tag);
+    }
+
+    writeCompleteReleaseTag() {
+        const dataDir = this.options.dataDir;
+        const version = fs.readFileSync(dataDir + '\\version', {encoding: "utf8"});
+
+        if (version.includes("#")) {
+            fs.writeFileSync(dataDir + '\\version', version.replace("#", ""));
+        }
+    }
+
+    checkExistsNewReleaseByTag() {
+        const dataDir = this.options.dataDir;
+        const version = fs.readFileSync(dataDir + '\\version', {encoding: "utf8"});
+
+        if (version.includes("#")) {
+            return Promise.resolve(false);
+        }
+
+        return axios.get("https://api.github.com/repos/yanotek/matrix-control/releases/latest").then(function(response) {
+            const lastVersion = response.data["tag_name"];
+
+            return version !== lastVersion;
+        })
     }
 }
 

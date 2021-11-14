@@ -1,17 +1,13 @@
 const ChatControl = require("./chat-control");
 const chat = new ChatControl({
     dataDir: "C:\\temp\\matrix-data\\",
-    domain: "localhost",
-    port: 5007
+    domain: "188.187.45.218",
+    port: 33456
 });
 
-// chat.copyTemplate("C:\\temp\\matrix-data\\homeserver-template.yaml", "C:\\temp\\matrix-data\\homeserver.yaml", {
-//     "#DOMAIN": "vamily.ru"
-// })
-
-chat.installLastRelease()
-    .then(function () {
-        console.log("install complete");
+chat.checkExistsNewReleaseByTag()
+    .then(function (exists) {
+        console.log("New release " + exists);
     })
     .catch(function (reason) {
         console.error(reason);
