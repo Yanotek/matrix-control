@@ -10,6 +10,12 @@ module.exports = class ChatControl {
         this.options = options;
     }
 
+    checkChatIsInstalling() {
+        const pathToFile = this.options.dataDir + "version";
+
+        return fs.existsSync(pathToFile);
+    }
+
     checkDocker() {
         const docker = new dockerCLI.Docker();
         docker.options.echo = false;
@@ -311,6 +317,10 @@ module.exports = class ChatControl {
     }
 
     checkExistsNewReleaseByTag() {
+        if (!this.checkChatIsInstalling()) {
+            return Promise.resolve(true);
+        }
+
         const dataDir = this.options.dataDir;
         const version = fs.readFileSync(dataDir + '\\version', {encoding: "utf8"});
 
